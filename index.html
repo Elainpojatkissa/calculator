@@ -1,212 +1,84 @@
-<html>
+<!DOCTYPE html>
+<html lang="fi">
 <head>
   <meta charset="UTF-8">
-  <title>Calculator</title>
+  <title>Laskin</title>
   <style>
-    * {
-      box-sizing: border-box;
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f8ff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
+
     .calculator {
-      width: 400px;
-    }
-    .screen {
-      height: 50px;
-      border: 1px solid black;
-      text-align: right;
-      font-size: 30px;
-      line-height: 50px;
-      padding-right: 10px;
-    }
-    .key-pad {
-      display: flex;
-    }
-    .num-keys {
-      display: flex;
-      flex-wrap: wrap;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
       width: 300px;
+      text-align: center;
     }
-    .num-keys button {
-      width: 90px;
+
+    input[type="text"] {
+      width: 100%;
+      font-size: 24px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      font-size: 20px;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    #result {
+      font-size: 22px;
+      margin-top: 10px;
+      color: #333;
     }
   </style>
 </head>
 <body>
   <div class="calculator">
-    <p id="screen" class="screen">0</p>
-    <div id="key-pad" class="key-pad">
-      <div class="num-keys">
-        <button>1</button>
-        <button>2</button>
-        <button>3</button>
-        <button>4</button>
-        <button>5</button>
-        <button>6</button>
-        <button>7</button>
-        <button>8</button>
-        <button>9</button>
-        <button>0</button>
-      </div>
-      <div>
-        <button>+</button>
-        <button>-</button>
-        <button>*</button>
-        <button>/</button>
-        <button>=</button>
-      </div>
-    </div>
+    <input type="text" id="expression" placeholder="Syötä lasku esim. 12+3*4">
+    <br>
+    <button onclick="calculate()">=</button>
+    <button onclick="clearInput()">Tyhjennä</button>
+    <div id="result"></div>
   </div>
+
   <script>
-    class Stack {
-      constructor() {
-        this.stack = [];
-        this[Symbol.iterator] = function *() {
-          for (const el of this.stack) {
-            yield el;
-          }
-        }
-      }
+    const input = document.getElementById('expression');
+    const result = document.getElementById('result');
 
-      isEmpty() {
-        return this.stack.length === 0;
-      }
-
-      push(val) {
-        this.stack.push(val);
-      }
-
-      pop() {
-        if (this.isEmpty()) {
-          throw new Error('empty stack');
-        } else {
-          return this.stack.pop();
-        }
-      }
-
-      peek(n = -1) {
-        if (this.isEmpty()) {
-          throw new Error('empty stack');
-        } else {
-          return this.stack[this.stack.length + n];
-        }
-      }
-    }
-
-    document.getElementById('key-pad').addEventListener('click', (event) => {
-      if (event.target.tagName === 'BUTTON') {
-        input(event.target.innerHTML);
-        render();
-      }
+    // Estetään muut kuin numerot ja + - * /
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/[^0-9+\-*/]/g, '');
     });
 
-    const $screen = document.getElementById('screen');
-    const stack = new Stack();
-    let shouldResetIfNumber = false;
-    let display = 0;
-
-    stack.push(0);
-
-    function input(char) {
-      if (isNum(char)) {
-        if (shouldResetIfNumber) {
-          stack.pop();
-          stack.push(parseInt(char));
-          shouldResetIfNumber = false;
-        } else if (isNum(stack.peek())) {
-          const n = stack.pop();
-          stack.push(n * 10 + parseInt(char));
-        } else {
-          stack.push(parseInt(char));
+    function calculate() {
+      try {
+        const val = input.value;
+        if (val === '') {
+          result.innerText = 'Anna lasku!';
+          return;
         }
-        display = stack.peek();
-      } else if (char !== '=') {
-        shouldResetIfNumber = false;
-        if (isNum(stack.peek())) {
-          stack.push(char);
-        } else {
-          stack.pop();
-          stack.push(char);
-        }
-        display = evaluate(stack);
-      } else {
-        const res = evaluate(stack, true);
-        while (!stack.isEmpty()) {
-          stack.pop();
-        }
-        stack.push(res);
-        shouldResetIfNumber = true;
-        display = res;
+        const answer = eval(val);
+        result.innerText = 'Tulos: ' + answer;
+      } catch (e) {
+        result.innerText = 'Virheellinen lasku';
       }
     }
 
-    function evaluate(stack, isComplete = false) {
-      const values = new Stack();
-      const operators = new Stack();
-      for (const val of stack) {
-        if (isNum(val)) {
-          values.push(val);
-        } else {
-          if (val === '+' || val === '-') {
-            while (!operators.isEmpty()) {
-              values.push(operators.pop());
-            }
-            operators.push(val);
-          } else {
-            while (!operators.isEmpty() && (operators.peek() === '*' || operators.peek() === '/')) {
-              values.push(operators.pop());
-            }
-            operators.push(val);
-          }
-        }
-      }
-
-      if (isComplete) {
-        while (!operators.isEmpty()) {
-          values.push(operators.pop());
-        }
-      }
-
-      const rpn = new Stack();
-      for (const val of values) {
-        if (isNum(val)) {
-          rpn.push(val);
-        } else {
-          const b = rpn.pop();
-          const a = rpn.pop();
-          switch (val) {
-            case '+':
-              rpn.push(a + b);
-              break;
-            case '-':
-              rpn.push(a - b);
-              break;
-            case '/':
-              rpn.push(a / b);
-              break;
-            case '*':
-              rpn.push(a * b);
-              break;
-          }
-        }
-      }
-
-      return rpn.pop();
-    }
-
-    function render() {
-      $screen.innerHTML = display;
-    }
-
-    function isNum(val) {
-      if (typeof val === 'number') {
-        return true;
-      } else if (typeof val === 'string') {
-        return !Number.isNaN(parseInt(val));
-      } else {
-        return false;
-      }
+    function clearInput() {
+      input.value = '';
+      result.innerText = '';
     }
   </script>
 </body>
 </html>
-@Elainpojatkissa
-Comment
